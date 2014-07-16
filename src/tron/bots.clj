@@ -7,61 +7,38 @@
   [look {[x y] :pos}]
   {:pos [(inc x) y]})
 
-(defn new-pos
-  ([dir old-pos] (new-pos dir old-pos 1))
-  ([dir [x y] distance]
-      (cond
-       (= dir :east) [(+ x distance) y]
-       (= dir :west) [(- x distance) y]
-       (= dir :north) [x (- y distance)]
-       (= dir :south) [x (+ y distance)]
-       :true [x y])))
-
-(defn safe-pos? [look position]
-  (not (look position)))
-
-(def look-fn (atom nil))
-
-(defn get-dirs []
-  [:east :west :north :south])
-
-(defn turner
-  "I'll just turn around"
+(defn south-walker
   [look {[x y] :pos}]
-  (reset! look-fn look)
-  (let [dirs (get-dirs)
-        move-options (map new-pos dirs (cycle [[x y]]))
-        new-pos (first
-                 (filter #(safe-pos? look %)
-                         move-options))]
-    {:pos
-     new-pos}))
-;;next recursive walker, looks few steps ahead
-;; makes one decision and then re-evaluates based on outcome of
-;; move from this future step
-(defn farseer
-  [look {old-pos :pos}]
-  (let [dirs (get-dirs)
-        dist [1 5]
-        options (filter second
-                        (for [dir dirs
-                              d dist]
-                          [dir (safe-pos? look
-                                          (new-pos dir old-pos d))]))
-        [best-dir _] (last
-                      (sort-by second
-                               (map (fn [[k v]] [k (count v)])
-                                    (group-by first options))))]
-
-    {:pos (new-pos best-dir old-pos)}))
-
-(defn get-cross-dirs [dir]
-  (if (or (= dir :south) (= dir :north))
-    [:east :west]
-    [:north :south]))
-
-(defn south-walker [look {[x y] :pos}]
   {:pos [x (inc y)]})
+
+(defn is-empty? [look pos]
+  ;(println (look pos))
+  (not (look pos)))
+
+(defn go-west [[x y]]
+  [(dec x) y])
+
+(defn go-east [[x y]]
+  [(inc x) y])
+
+(defn go-north [[x y]]
+  [x (dec y)])
+
+(defn go-south [[x y]]
+  [x (inc y)])
+
+(defn turn-turn [look [x y :as pos]]
+  (cond
+   (is-empty? look (go-east pos)) (go-east pos)
+   (is-empty? look (go-west pos)) (go-west pos)
+   (is-empty? look (go-north pos)) (go-north pos)
+   (is-empty? look (go-south pos)) (go-south pos)
+   :true [(inc x) (inc y)]))
+
+(defn turner [look {[x y] :pos}]
+  {:pos (turn-turn look [x y])})
+
+
 
 ; Choose a TEAM colour
 (def red 1)
@@ -88,7 +65,7 @@
     (tron/spawn-biker buzz red)
     (tron/spawn-biker south-walker green)
     (tron/spawn-biker turner orange)
-    (tron/spawn-biker farseer blue)
+
     )
   )
 
